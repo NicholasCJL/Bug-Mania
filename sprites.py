@@ -93,61 +93,71 @@ class Quad(Polygon):
 
 
 class BugSprite(Polygon):
-    def __init__(self, midpoint,
+    def __init__(self, midpoint, angle=0,
                  body_colour=(255, 255, 255),
                  horn_colour=(255, 255, 255),
                  leg_colour=(255, 255, 255)):
-        body_points = [midpoint.translate_by(Vector(4*(-1)**i, -10)) for i in range(1, 3)]
-        body_points.extend([midpoint.translate_by(Vector(4*(-1)**i, 10)) for i in range(2)])
-        x_min, y_min = body_points[0].get_coords()
+        self.body_points = [midpoint.translate_by(Vector(4*(-1)**i, -10)) for i in range(1, 3)]
+        self.body_points.extend([midpoint.translate_by(Vector(4*(-1)**i, 10)) for i in range(2)])
+        x_min, y_min = self.body_points[0].get_coords()
         self.midpoint = midpoint
+        self.angle = angle
         self.body_colour, self.horn_colour, self.leg_colour = body_colour, horn_colour, leg_colour
-        self.body = Quad(*body_points, colour=body_colour)
+        self.body = Quad(*self.body_points, colour=body_colour)
         self.body.set_surface_size(33)
         self.legs = [Line(Point(x_min - 4, 4 * i + y_min + 2),
                           Point(x_min + 12, 4 * i + y_min + 2))
                      for i in range(1, 4)]
         self.horns = [Line(Point(x_min + 1, y_min - 8), Point(x_min + 2, y_min)),
                       Line(Point(x_min + 7, y_min - 8), Point(x_min + 6, y_min))]
+        self.original_surface = self.get_initial_surface()
 
-
-    def draw(self):
-        draw_surface = self.body.create_bounding_surface()
-        surf_midpoint = self.body.surface_midpoint
-        absolute_to_relative = Vector.vector_from_points(self.midpoint, surf_midpoint)
+    def get_initial_surface(self):
+        original_surface = pygame.Surface((16, 28), pygame.SRCALPHA)
+        self.surface_midpoint = self.get_surface_midpoint(original_surface)
+        absolute_to_relative = Vector.vector_from_points(self.midpoint, self.surface_midpoint)
         relative_legs = [leg.translate_by(absolute_to_relative) for leg in self.legs]
         for leg in relative_legs:
-            pygame.draw.line(draw_surface, self.leg_colour,
+            pygame.draw.line(original_surface, self.leg_colour,
                              leg.point_1.get_coords(),
                              leg.point_2.get_coords(),
                              width=2)
         relative_horns = [horn.translate_by(absolute_to_relative) for horn in self.horns]
         for horn in relative_horns:
-            pygame.draw.line(draw_surface, self.horn_colour,
+            pygame.draw.line(original_surface, self.horn_colour,
                              horn.point_1.get_coords(),
                              horn.point_2.get_coords(),
                              width=2)
-        body_surface, location = self.body.draw()
-        draw_surface.blit(body_surface, (0, 0))
+        relative_points = [p.translate_by(absolute_to_relative).get_coords()
+                           for p in self.body_points]
+        pygame.draw.polygon(original_surface, self.body_colour, relative_points)
+        return original_surface
+
+    def get_surface_midpoint(self, surface):
+        return Point(*surface.get_rect().center)
+
+    def draw(self, width=0):
+        """Returns surface containing sprite and location of top left corner of the surface."""
+        # create new surface with transformation
+        draw_surface = pygame.transform.rotate(self.original_surface, math.degrees(self.angle))
+        # midpoint of new transformed surface
+        new_midpoint = self.get_surface_midpoint(draw_surface)
+        # find series of translation vectors to center new surface on absolute position of current sprite
+        new_to_original = Vector.vector_from_points(new_midpoint, self.surface_midpoint)
+        original_to_target = Vector.vector_from_points(self.surface_midpoint, self.midpoint)
+        new_to_target = new_to_original + original_to_target
+        # absolute position of top left point of sprite
+        location = Point.point_from_vector(new_to_target)
         return draw_surface, location
 
-    def rotate_about_ip(self, angle, origin):
-        self.body.rotate_about_ip(angle, origin)
-        for leg in self.legs:
-            leg.rotate_about_ip(angle, origin)
-        for horn in self.horns:
-            horn.rotate_about_ip(angle, origin)
-        if self.midpoint != origin:
-            self.midpoint.rotate_about_ip(angle, origin)
+    def rotate_about_midpoint_ip(self, angle):
+        """Rotates sprite about its midpoint. Actual rotation is deferred to the draw method."""
+        self.angle += angle
+        self.angle %= math.pi * 2
 
     def translate_by_ip(self, vector):
-        self.body.translate_by_ip(vector)
-        for leg in self.legs:
-            leg.translate_by_ip(vector)
-        for horn in self.horns:
-            horn.translate_by_ip(vector)
+        """Translates sprite by vector. Actual translation is deferred to the draw method."""
         self.midpoint.translate_by_ip(vector)
-
 
 class Line:
     def __init__(self, point_1, point_2):
@@ -182,6 +192,10 @@ class Line:
 
 
 class Point:
+    @classmethod
+    def point_from_vector(cls, vector):
+        return cls(*vector.get_components())
+
     def __init__(self, x, y):
         self.x, self.y = x, y
 
