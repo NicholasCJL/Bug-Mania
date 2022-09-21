@@ -1,6 +1,9 @@
-import pygame
 import sys
+import math
+import pygame
 import agents
+import utility
+import sprites
 import random
 
 class Engine:
@@ -30,19 +33,23 @@ class Engine:
             self.add_agent(agent)
 
     def game_loop(self):
-        counter = 0
+        # counter = 0
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
 
             self.canvas.fill(self.background_colour)
+
             for agent in self.agents:
-                if agent.to_draw():
-                    agent.act()
-                    temp_surf, location = agent.draw()
-                    self.canvas.blit(temp_surf, location)
-                    # print(agent.get_energy(), agent.is_resting)
+                agent.update(None)
+                agent_surf, surf_location = agent.draw()
+                self.canvas.blit(agent_surf, surf_location.get_coords())
+                # if agent.to_draw():
+                #     agent.act()
+                #     temp_surf, location = agent.draw()
+                #     self.canvas.blit(temp_surf, location)
+                #     # print(agent.get_energy(), agent.is_resting)
 
             wipe_fps = self.draw_box(40, 20, (0, 0, 0))
             self.canvas.blit(wipe_fps, (10, 10))
@@ -58,20 +65,33 @@ class Engine:
         box_surface.set_alpha(alpha)
         return box_surface
 
+screen_size = (1000, 1000)
+test_engine = Engine(screen_size, (0, 150, 0), 300)
+for i in range(150):
+    test_engine.add_agent(agents.Bug(utility.Point(500, 500), 0.2, 1000, math.pi / 600,
+                                     bounds=(1000, 1000),
+                                     body_colour=(random.randint(100, 255),
+                                                  random.randint(100, 255),
+                                                  random.randint(100, 255)),
+                                     leg_colour=(random.randint(100, 255),
+                                                 random.randint(100, 255),
+                                                 random.randint(100, 255)),
+                                     horn_colour=(random.randint(100, 255),
+                                                  random.randint(100, 255),
+                                                  random.randint(100, 255)),
+                                     size=1, fov=1, eyesight=1, nn_seed=random.randint(0, 100000)))
+
+test_engine.start()
+test_engine.game_loop()
+
 # COLOURS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255), (0, 0, 0)]
 # COLOURS = [(38, 255, 53), (85, 217, 93), (13, 161, 23), (38, 255, 53), (85, 217, 93),
 #            (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191), (2, 163, 191),
 #            (85, 217, 93), (13, 161, 23), (245, 245, 245), (245, 245, 245)]
-screen_size = (1000, 1000)
-test_engine = Engine(screen_size, (0, 0, 0), 60)
-test_engine.add_agent(agents.Ant(100, 500, 500, (0, 255, 0), (10, 10, 980, 980), 2, 2))
 # for i in range(10):
 #     test_ants = [agents.Ant(100, random.randint(60, 550), random.randint(200, 1100),
 #                         COLOURS[i], (5, 5, 622, 1290), width=3, height=3) for i in range(len(COLOURS))]
 #     test_engine.add_agents(test_ants)
-test_engine.start()
-test_engine.game_loop()
-
 # pygame.init()
 #
 # fps = 30
