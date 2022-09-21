@@ -5,7 +5,7 @@ import pickle
 class BugNN:
     architecture = [
         {"inputs": 6, "outputs": 6, "activation": "relu"},
-        {"inputs": 6, "outputs": 4, "activation": "sigmoid"}
+        {"inputs": 6, "outputs": 5, "activation": "sigmoid"}
     ]
     action_dict = {
         0: "left",
@@ -26,9 +26,11 @@ class BugNN:
         with open(filepath, 'rb') as file:
             return pickle.load(file)
 
-    def __init__(self, seed=22):
+    def __init__(self, action_dict=None, architecture=None, seed=22):
+        self.action_dict = action_dict if action_dict is not None else BugNN.action_dict
+        self.architecture = architecture if architecture is not None else BugNN.architecture
         np.random.seed(seed)
-        self.layers = [self.weights_from_layer(layer) for layer in BugNN.architecture]
+        self.layers = [self.weights_from_layer(layer) for layer in self.architecture]
 
     def weights_from_layer(self, layer):
         num_in, num_out = layer["inputs"], layer["outputs"]
@@ -36,10 +38,6 @@ class BugNN:
         weight_matrix = np.random.random((num_out, num_in)) - 0.5
         bias_matrix = np.random.random(num_out)
         return weight_matrix, bias_matrix, activation
-
-    def infer(self, inputs):
-        output_vector = self.forward(inputs)
-        return np.argmax(output_vector)
 
     def forward(self, inputs):
         curr_vector = inputs
