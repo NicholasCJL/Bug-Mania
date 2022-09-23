@@ -26,18 +26,19 @@ class BugNN:
         with open(filepath, 'rb') as file:
             return pickle.load(file)
 
-    def __init__(self, action_dict=None, architecture=None, seed=22):
-        self.action_dict = action_dict if action_dict is not None else BugNN.action_dict
-        self.architecture = architecture if architecture is not None else BugNN.architecture
-        np.random.seed(seed)
-        self.layers = [self.weights_from_layer(layer) for layer in self.architecture]
-
-    def weights_from_layer(self, layer):
+    @staticmethod
+    def random_weights_from_layer(layer):
         num_in, num_out = layer["inputs"], layer["outputs"]
         activation = BugNN.relu if layer["activation"] == "relu" else BugNN.sigmoid
         weight_matrix = np.random.random((num_out, num_in)) - 0.5
         bias_matrix = np.random.random(num_out)
         return weight_matrix, bias_matrix, activation
+
+    def __init__(self, action_dict=None, architecture=None, seed=22):
+        self.action_dict = action_dict if action_dict is not None else BugNN.action_dict
+        self.architecture = architecture if architecture is not None else BugNN.architecture
+        np.random.seed(seed)
+        self.layers = [BugNN.random_weights_from_layer(layer) for layer in self.architecture]
 
     def forward(self, inputs):
         curr_vector = inputs
