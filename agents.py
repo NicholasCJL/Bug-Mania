@@ -7,11 +7,17 @@ from utility import Vector, Point
 from utility import euclidean_distance as distance
 
 class Bug:
+    """
+    BugNN inputs: Energy (proportion of max_energy),
+                  Food left, Food front, Food right (inverse distance, proportion of eyesight),
+                  Obstacle (inverse distance, proportion of eyesight),
+                  Ant (no idea for now)
+    """
     max_eyesight = 100
     food_energy = 50
     movement_cost = 0.1
-    rotation_cost = 0.01
-    wall_collide_cost = 1
+    rotation_cost = 0.03
+    wall_collide_cost = 5
     bug_collide_cost = 1
     eat_cost = 0.2
     eaten_cost = 0.1 # proportion of eater
@@ -28,7 +34,8 @@ class Bug:
         self.max_energy = max_energy
         self.max_rotate = max_rotate
         self.energy = max_energy
-        self.x_bound, self.y_bound = bounds # x and y value indicating width and height of field
+        # x and y value indicating width and height of field
+        (self.x_bound_low, self.x_bound_high), (self.y_bound_low, self.y_bound_high) = bounds
         self.body_colour, self.leg_colour, self.horn_colour = body_colour, leg_colour, horn_colour
         self.size = size
         self.fov = [i * fov / 6 for i in range(-3, 4, 2)]
@@ -41,7 +48,7 @@ class Bug:
         self.eat_cost = eat_cost if eat_cost is not None else Bug.eat_cost
         self.eaten_cost = eaten_cost if eaten_cost is not None else Bug.eaten_cost
         self.eat_energy = eat_energy if eat_energy is not None else Bug.eat_energy
-        self.sprite = BugSprite(position, body_colour=self.body_colour, horn_colour=self.horn_colour,
+        self.sprite = BugSprite(position, angle=(nn_seed % 36), body_colour=self.body_colour, horn_colour=self.horn_colour,
                                 leg_colour=self.leg_colour)
         self.brain = BugNN(seed=nn_seed)
 
@@ -51,6 +58,11 @@ class Bug:
 
         # generate fake random input
         nn_input = 2 * np.random.random(6) - 1
+        # set energy input
+        nn_input[0] = self.energy / self.max_energy
+        # set obstacle input
+        distance_to_bounds = self._get_closest_bound()
+        nn_input[4] = max(0, 1 - distance_to_bounds / self.eyesight)
 
         # get output of neural network
         nn_output = self.brain.forward(nn_input)
@@ -86,9 +98,11 @@ class Bug:
 
         # move in straight line
         direction = self.sprite.pointing_vector()
-        move_vector = direction * (self.max_speed * nn_output[3])
+        speed = self.max_speed * nn_output[3]
+        move_vector = direction * speed
         destination = self.sprite.translate_by(move_vector)
-        if (0 < destination.x < self.x_bound) and (0 < destination.y < self.y_bound):
+        if (self.x_bound_low < destination.x < self.x_bound_high) \
+                and (self.y_bound_low < destination.y < self.y_bound_high):
             self.sprite.translate_by_ip(direction * (self.max_speed * nn_output[3]))
             self.energy -= Bug.movement_cost
         else:
@@ -117,3 +131,16 @@ class Bug:
 
     def rotate(self, angle):
         self.sprite.rotate_about_midpoint_ip(angle)
+
+    def _get_closest_bound(self):
+        curr_location_x, curr_location_y = self.sprite.get_coords()
+        curr_lowest_distance = 99999999
+        if (dist := (curr_location_x - self.x_bound_low)) < curr_lowest_distance:
+            curr_lowest_distance = dist
+        if (dist := (self.x_bound_high - curr_location_x)) < curr_lowest_distance:
+            curr_lowest_distance = dist
+        if (dist := (curr_location_y - self.y_bound_low)) < curr_lowest_distance:
+            curr_lowest_distance = dist
+        if (dist := (self.y_bound_high - curr_location_y)) < curr_lowest_distance:
+            curr_lowest_distance = dist
+        return curr_lowest_distance
