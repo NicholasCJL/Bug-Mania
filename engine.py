@@ -66,10 +66,10 @@ class Engine:
         return box_surface
 
 screen_size = (1000, 1000)
-test_engine = Engine(screen_size, (0, 150, 0), 300)
-for i in range(150):
-    test_engine.add_agent(agents.Bug(utility.Point(500, 500), 0.2, 1000, math.pi / 600,
-                                     bounds=(1000, 1000),
+test_engine = Engine(screen_size, (0, 0, 0), 60)
+for i in range(200):
+    test_engine.add_agent(agents.Bug(utility.Point(500, 500), 1, 1000, math.pi / 120,
+                                     bounds=((10, 990), (10, 990)),
                                      body_colour=(random.randint(100, 255),
                                                   random.randint(100, 255),
                                                   random.randint(100, 255)),
@@ -79,7 +79,7 @@ for i in range(150):
                                      horn_colour=(random.randint(100, 255),
                                                   random.randint(100, 255),
                                                   random.randint(100, 255)),
-                                     size=1, fov=1, eyesight=1, nn_seed=random.randint(0, 100000)))
+                                     size=1, fov=1, eyesight=30, nn_seed=random.randint(0, 1000000)))
 
 test_engine.start()
 test_engine.game_loop()
