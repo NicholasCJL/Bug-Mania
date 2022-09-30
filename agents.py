@@ -28,7 +28,7 @@ class Bug:
                  horn_colour, size, fov, eyesight, food_energy=None, movement_cost=None,
                  rotation_cost=None, wall_collide_cost=None,
                  bug_collide_cost=None, eat_cost=None, eaten_cost=None,
-                 eat_energy=None, nn_seed=22):
+                 eat_energy=None, nn_seed=22, architecture=None):
         # self.curr_angle = 0
         self.max_speed = max_speed
         self.max_energy = max_energy
@@ -50,12 +50,16 @@ class Bug:
         self.eat_energy = eat_energy if eat_energy is not None else Bug.eat_energy
         self.sprite = BugSprite(position, angle=(nn_seed % 36), body_colour=self.body_colour, horn_colour=self.horn_colour,
                                 leg_colour=self.leg_colour)
-        self.brain = BugNN(seed=nn_seed)
+        self.brain = BugNN(seed=nn_seed, architecture=architecture)
+        self.fitness = 0
+        self.is_dead = False
 
     def update(self, state):
         if self.energy <= 0:
+            self.is_dead = True
             return
 
+        self.fitness += 1
         # generate fake random input
         nn_input = 2 * np.random.random(6) - 1
         # set energy input
@@ -109,7 +113,7 @@ class Bug:
             self.energy -= Bug.wall_collide_cost
 
         if self.energy <= 0:
-            pass
+            self.is_dead = True
             self.sprite.new_colour(body_colour=(80, 80, 80, 150),
                                    leg_colour=(80, 80, 80, 150),
                                    horn_colour=(80, 80, 80, 150))
