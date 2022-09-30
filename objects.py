@@ -1,7 +1,7 @@
 import pygame
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
-class Object:
+class Object(ABC):
     def __init__(self, width, height, left, top, colour, speed, bounds, to_draw=True, alpha=255):
         self.speed = speed
         self.bounds = {"left": bounds[0],
