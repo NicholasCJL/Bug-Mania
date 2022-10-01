@@ -15,8 +15,8 @@ class Bug:
     """
     max_eyesight = 100
     food_energy = 50
-    movement_cost = 0.1
-    rotation_cost = 0.03
+    movement_cost = 0.07
+    rotation_cost = 0.1
     wall_collide_cost = 5
     bug_collide_cost = 1
     eat_cost = 0.2
@@ -28,7 +28,7 @@ class Bug:
                  horn_colour, size, fov, eyesight, food_energy=None, movement_cost=None,
                  rotation_cost=None, wall_collide_cost=None,
                  bug_collide_cost=None, eat_cost=None, eaten_cost=None,
-                 eat_energy=None, nn_seed=22, architecture=None):
+                 eat_energy=None, brain=None, nn_seed=22, architecture=None):
         # self.curr_angle = 0
         self.max_speed = max_speed
         self.max_energy = max_energy
@@ -50,7 +50,7 @@ class Bug:
         self.eat_energy = eat_energy if eat_energy is not None else Bug.eat_energy
         self.sprite = BugSprite(position, angle=(nn_seed % 36), body_colour=self.body_colour, horn_colour=self.horn_colour,
                                 leg_colour=self.leg_colour)
-        self.brain = BugNN(seed=nn_seed, architecture=architecture)
+        self.brain = BugNN(seed=nn_seed, architecture=architecture) if brain is None else brain
         self.fitness = 0
         self.is_dead = False
 
@@ -85,6 +85,23 @@ class Bug:
         #     self.update_state(state)
         # # updates attributes
         # self.update_self(action, energy_change)
+
+    def get_genome(self):
+        """Get genome of bug, [colour genes], [weight genes], [bias genes]"""
+        # Colour genes: Body, legs, horns
+        colour_genes = []
+        body_colours = [colour/255.0 for colour in self.body_colour]
+        leg_colours = [colour/255.0 for colour in self.leg_colour]
+        horn_colours = [colour/255.0 for colour in self.horn_colour]
+        colour_genes.extend(body_colours)
+        colour_genes.extend(leg_colours)
+        colour_genes.extend(horn_colours)
+        # Neural network genes: weights, biases
+        brain_genes = self.brain.get_brain_genome()
+        genome = colour_genes
+        genome.extend(brain_genes[0])
+        genome.extend(brain_genes[1])
+        return genome
 
     def get_input(self, state):
         energy = self.energy
