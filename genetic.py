@@ -83,7 +83,7 @@ class GeneticController:
         :float reverse_rate: Rate of reverse mutation (per genome)
         :(int, int) reverse_size: Lower and upper bound of number of genes reversed
         :float noise_rate: Rate of noise added mutation (per gene)
-        :float noise_var: Variance of gaussian distribution noise is sampled from
+        :float noise_sd: Variance of gaussian distribution noise is sampled from
         :float noise_mean: Mean of gaussian distribution noise is sampled from
         """
         self.population = sorted(population, key=lambda x: x[1], reverse=True)
@@ -98,8 +98,11 @@ class GeneticController:
         self.noise_mean = noise_mean
 
     def generate_children(self):
+        print("Performing parent selection.")
         parent_pairs = self.sus_selection()
+        print("Performing crossover.")
         children = [(self.crossover(*pair), pair) for pair in parent_pairs]
+        print("Mutating genomes.")
         mutated_children = [(self.mutate(child[0]), child[1]) for child in children]
         return mutated_children
 
@@ -147,11 +150,11 @@ class GeneticController:
                 pair_list.append((self.population[mate_a][0],
                                   self.population[mate_b][0]))
             else:
-                other_mate = self.population[random.randrange(0, len(self.population))][0]
+                other_mate = random.randrange(0, len(self.population))
                 while other_mate == mate_a:
                     other_mate = self.population[random.randrange(0, len(self.population))][0]
                 pair_list.append((self.population[mate_a][0],
-                                  other_mate))
+                                  self.population[other_mate][0]))
 
             # remove one instance of mate_a from the pool
             keep_list[0][1] -= 1
