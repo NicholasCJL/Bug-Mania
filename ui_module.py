@@ -95,18 +95,16 @@ class UI_status(UI_element):
 
     def update(self, kwargs):
         status = kwargs['status']
-
+        generation = kwargs['generation']
         # iterate generation if done with genetic algorithm
-        if self.is_running_genetic_algo and not status:
-            self.generation += 1
         self.is_running_genetic_algo = status
 
         # generate surface with status
         if self.is_running_genetic_algo:
-            status_surface = self.font.render(f"Generating generation {self.generation + 1}",
+            status_surface = self.font.render(f"Generating generation: {generation: >2}",
                                               True, self.font_colour, self.background_colour)
         else:
-            status_surface = self.font.render(f"Running generation {self.generation}",
+            status_surface = self.font.render(f"Running generation: {generation: >2}   ",
                                               True, self.font_colour, self.background_colour)
         self.surface.blit(status_surface, (0, 0))
 
@@ -123,7 +121,7 @@ class UI_alive(UI_element):
     def update(self, kwargs):
         num_dead = kwargs['num_dead']
         num_alive = self.original_alive - num_dead
-        alive_surface = self.font.render(f"Num alive: {num_alive}",
+        alive_surface = self.font.render(f"Num alive: {num_alive: >3}",
                                          True, self.font_colour, self.background_colour)
         self.surface.blit(alive_surface, (0, 0))
 
@@ -138,11 +136,8 @@ class UI_fitness(UI_element):
 
     def update(self, kwargs):
         fitness = kwargs['fitness']
-        fitness_surface = self.font.render(f"Current max fitness: {fitness}",
+        fitness_surface = self.font.render(f"Current max fitness: {fitness: >5}",
                                            True, self.font_colour, self.background_colour)
         self.surface.blit(fitness_surface, (0, 0))
 
 
-# class UI_genetic_progress(UI_element):
-#     """Displays progress in genetic algorithm"""
-#     def
