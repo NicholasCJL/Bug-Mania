@@ -49,10 +49,6 @@ class BugNN:
                       bias_matrix.astype(dtype=np.float32))
         return layer
 
-    @staticmethod
-    def construct_layer(layer, weights, biases):
-        pass
-
     def __init__(self, action_dict=None, architecture=None, seed=22):
         self.action_dict = action_dict if action_dict is not None else BugNN.action_dict
         self.architecture = architecture if architecture is not None else BugNN.architecture
