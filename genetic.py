@@ -1,4 +1,5 @@
 import struct
+import math
 import random
 import numpy as np
 
@@ -38,6 +39,12 @@ class BugGenome:
 
     def get_segment_bounds(self):
         return self.colour_segment, self.weight_segment, self.bias_segment
+
+    def check_NaN(self, default=0):
+        """Check if any gene is NaN, changes it to default value if it is"""
+        for i, gene in enumerate(self.genome):
+            if math.isnan(gene):
+                self.genome[i] = default
 
     def __len__(self):
         return len(self.genome)
@@ -225,6 +232,9 @@ class GeneticController:
             reverse_start = np.random.randint(0, genome_length - reverse_size + 1)
             reversed_segment = reversed(new_genome.get_gene_segment(reverse_start, reverse_start + reverse_size))
             new_genome.set_gene_segment(reverse_start, reverse_start + reverse_size, reversed_segment)
+
+        # check if any mutation caused gene to become NaN
+        new_genome.check_NaN()
 
         return new_genome
 
