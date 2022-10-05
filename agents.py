@@ -16,8 +16,8 @@ class Bug:
     max_eyesight = 100
     food_energy = 50
     movement_cost = 0.07
-    rotation_cost = 0.1
-    wall_collide_cost = 5
+    rotation_cost = 0.5
+    wall_collide_cost = 1.5
     bug_collide_cost = 1
     eat_cost = 0.2
     eaten_cost = 0.1 # proportion of eater
@@ -48,6 +48,7 @@ class Bug:
         self.eat_cost = eat_cost if eat_cost is not None else Bug.eat_cost
         self.eaten_cost = eaten_cost if eaten_cost is not None else Bug.eaten_cost
         self.eat_energy = eat_energy if eat_energy is not None else Bug.eat_energy
+        self.position = position
         self.sprite = BugSprite(position, angle=(nn_seed % 36), body_colour=self.body_colour, horn_colour=self.horn_colour,
                                 leg_colour=self.leg_colour)
         self.brain = BugNN(seed=nn_seed, architecture=architecture) if brain is None else brain
@@ -61,7 +62,7 @@ class Bug:
 
         self.fitness += 1
         # generate fake random input
-        nn_input = 2 * np.random.random(6) - 1
+        nn_input = 0 * np.random.random(6)
         # set energy input
         nn_input[0] = self.energy / self.max_energy
         # set obstacle input
@@ -88,6 +89,7 @@ class Bug:
 
     def get_genome(self):
         """Get genome of bug, [colour genes], [weight genes], [bias genes]"""
+        """MAKE THIS CONSISTENT WITH BUGGENOME OBJECT"""
         # Colour genes: Body, legs, horns
         colour_genes = []
         body_colours = [colour/255.0 for colour in self.body_colour]
@@ -125,7 +127,7 @@ class Bug:
         if (self.x_bound_low < destination.x < self.x_bound_high) \
                 and (self.y_bound_low < destination.y < self.y_bound_high):
             self.sprite.translate_by_ip(direction * (self.max_speed * nn_output[3]))
-            self.energy -= Bug.movement_cost
+            self.energy -= (Bug.movement_cost / (nn_output[3] ** 2))
         else:
             self.energy -= Bug.wall_collide_cost
 
