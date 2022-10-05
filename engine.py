@@ -9,10 +9,28 @@ import random
 import ui_module
 import genetic
 import NeuralNetwork
+import pickle
 from statistics import mean, median
 
 class Engine:
-    def __init__(self, size, background_colour, fps, ui, ui_fps):
+    @staticmethod
+    def initialise_positions(num_pos, x_low, x_high, y_low, y_high):
+        """
+        Initialise random positions
+        :int num_pos: Number of random positions to initialise
+        :int x_low: Lower bound of x positions
+        :int x_high: Upper bound of x positions
+        :int y_low: Lower bound of y positions
+        :int y_high: Upper bound of y positions
+        :return: List of Point objects at random locations
+        """
+        positions = []
+        for _ in range(num_pos):
+            positions.append(utility.Point(random.randint(x_low, x_high),
+                                           random.randint(y_low, y_high)))
+        return positions
+
+    def __init__(self, size, background_colour, fps, ui, ui_fps, save_name="agents"):
         self.size = size
         self.width, self.height = size
         self.background_colour = background_colour
@@ -20,6 +38,7 @@ class Engine:
         self.ui_ratio = fps // ui_fps
         self.frame_time = 1000 // fps
         self.ui = ui
+        self.save_name = save_name
         self.agents = []
         pygame.display.init()
         pygame.mixer.pre_init(frequency=44100, size=-16, channels=2,
@@ -39,13 +58,43 @@ class Engine:
         for agent in agents:
             self.add_agent(agent)
 
+    def load(self, loaded_agents):
+        """Hacky way of doing it, change later!!!"""
+        # assumes loaded_agents has same number of agents as self.agents, fix later
+        for i, agent in enumerate(loaded_agents[0]):
+            genome = agent[0]
+            # colour
+            self.agents[i].body_colour = tuple(min(255, max(0, int(c * 255))) for c in genome[0:3])
+            self.agents[i].leg_colour = tuple(min(255, max(0, int(c * 255))) for c in genome[3:6])
+            self.agents[i].horn_colour = tuple(min(255, max(0, int(c * 255))) for c in genome[6:9])
+            self.agents[i].sprite = sprites.BugSprite(self.agents[i].position, angle=random.random() * math.pi * 2,
+                                                      body_colour=self.agents[i].body_colour,
+                                                      horn_colour=self.agents[i].horn_colour,
+                                                      leg_colour=self.agents[i].leg_colour)
+            # brain
+            brain = genome[9:]
+            architecture = agent[1]
+            self.agents[i].brain = NeuralNetwork.BugNN(architecture=architecture)
+            self.agents[i].brain.set_brain_connections(brain)
+
+    def save(self, generation):
+        agent_genomes = [agent.get_genome() for agent in self.agents]
+        agent_architecture = [agent.brain.architecture for agent in self.agents]
+        with open(f"{self.save_name}_{generation}.agents", 'wb') as file:
+            pickle.dump([list(zip(agent_genomes, agent_architecture)), generation], file)
+        print(f"Generation {generation} saved.")
+
     def game_loop(self):
         ui_dict = {'status': False, 'num_dead': 0, 'fitness': 0, 'generation': 0}
 
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    self.save(ui_dict['generation'])
                     sys.exit()
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_s:
+                        self.save(ui_dict['generation'])
 
             # refresh canvas
             self.canvas.fill(self.background_colour)
@@ -63,6 +112,7 @@ class Engine:
                     genome = genetic.BugGenome(gene_list[:9], gene_list[9:75], gene_list[75:])
                     fitness = agent.fitness
                     population.append((genome, fitness))
+
                 genetic_controller = genetic.GeneticController(population,
                                                                flip_rate=flip_rate,
                                                                swap_rate=swap_rate,
@@ -72,23 +122,29 @@ class Engine:
                                                                noise_sd=noise_sd)
                 new_agent_genomes = genetic_controller.generate_children()
                 new_agents = []
-                for genome in new_agent_genomes:
+                if len(new_agent_genomes) > len(self.agents):
+                    new_agent_genomes = new_agent_genomes[:len(self.agents)]
+
+                positions = Engine.initialise_positions(len(self.agents), 80, 920, 80, 920)
+
+                for idx, genome in enumerate(new_agent_genomes):
                     # clip RGB values of colours between 0 to 255
                     body_colour = tuple(min(255, max(0, int(c*255))) for c in genome[0].get_gene_segment(0, 3))
                     leg_colour = tuple(min(255, max(0, int(c*255))) for c in genome[0].get_gene_segment(3, 6))
                     horn_colour = tuple(min(255, max(0, int(c*255))) for c in genome[0].get_gene_segment(6, 9))
                     # crete new brain for child
                     brain_genes = genome[0].get_gene_segment(9, len(genome[0]))
-                    new_brain = NeuralNetwork.BugNN()
+                    new_brain = NeuralNetwork.BugNN(architecture=architecture)
                     new_brain.set_brain_connections(brain_genes)
-                    new_agents.append(agents.Bug(utility.Point(500, 500), max_speed=max_speed,
+                    new_agents.append(agents.Bug(positions[idx], max_speed=max_speed,
                                                  max_energy=max_energy, max_rotate=max_rotate,
                                                  bounds=bounds,
                                                  body_colour=body_colour,
                                                  leg_colour=leg_colour,
                                                  horn_colour=horn_colour,
                                                  size=1, fov=1, eyesight=eyesight,
-                                                 nn_seed=random.randint(0, 1000000), brain=new_brain))
+                                                 nn_seed=random.randint(0, 1000000),
+                                                 brain=new_brain))
 
                 # print stats
                 fitness_list = [agent.fitness for agent in self.agents]
@@ -148,24 +204,30 @@ class Engine:
 
 
 flip_rate = 0.0005
-swap_rate = 0.0005
+swap_rate = 0.0008
 shuffle_rate = 0.001
 reverse_rate = 0.001
-noise_rate = 0.002
-noise_sd = 0.05
+noise_rate = 0.009
+noise_sd = 0.1
 
 max_speed = 2
-max_energy = 300
+max_energy = 400
 max_rotate = math.pi / 100
 bounds = ((10, 990), (10, 990))
-eyesight = 30
+eyesight = 35
+
+architecture = architecture = [
+    {"inputs": 6, "outputs": 5, "activation": "relu"},
+    {"inputs": 5, "outputs": 4, "activation": "relu"},
+    {"inputs": 4, "outputs": 5, "activation": "relu"}
+]
 
 screen_size = (1310, 1000) # x, y
 test_ui = ui_module.UI(1000, 0, 310, 100,
                       border_colour=(0, 120, 0))
 test_engine = Engine(screen_size, (0, 0, 0), 60, test_ui, ui_fps=30)
 
-num_bugs = 200
+num_bugs = 400
 
 for i in range(num_bugs):
     test_engine.add_agent(agents.Bug(utility.Point(500, 500), max_speed=max_speed,
@@ -181,7 +243,12 @@ for i in range(num_bugs):
                                                   random.randint(80, 210),
                                                   random.randint(80, 210)),
                                      size=1, fov=1, eyesight=eyesight,
-                                     nn_seed=random.randint(0, 1000000)))
+                                     nn_seed=random.randint(0, 1000000),
+                                     architecture=architecture))
+
+# with open('single_dir_25_sight/agents_1338.agents', 'rb') as file:
+#     loaded_agents = pickle.load(file)
+#     test_engine.load(loaded_agents)
 
 test_engine.start()
 ui_font = pygame.font.SysFont("lucidaconsole", 18)
